@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2156,7 +2157,7 @@ body.colo-open { overflow: hidden; }
   fill: rgba(242,236,224,0.35); font-family: 'JetBrains Mono', monospace; font-size: 8px;
 }
 /* cars are SVG g elements inside the .ontrack-svg now · animateMotion + mpath */
-.ot-car-g { /* hook for future style tweaks */ --ot-car-g: 1; }
+.ot-car-g { /* hook for future style tweaks */ }
 @keyframes carRace { 0% { offset-distance: 0%; } 100% { offset-distance: 100%; } } /* kept for legacy if needed */
 @keyframes carRace {
   0%   { offset-distance: 0%; }
@@ -3456,22 +3457,20 @@ body.colo-open { overflow: hidden; }
 
   <!-- STEP 1: name -->
   <div class="onb-stage" id="onbStep1">
-      <div class="onb-eyebrow"><span class="num">01</span> / 02 &middot; <span class="lbl">identity</span></div>
-      <h1 class="onb-headline">
-        <span class="hl-word w1"><span>Enter your</span></span>
-        <span class="hl-word w2 italic"><span>name</span></span><span class="hl-dot" aria-hidden="true"></span>
-      </h1>
-      <p class="onb-sub">Drop your name or paddock handle below to customize your personalized live pit wall dashboard telemetry.</p>
-      
-      <div class="onb-field" style="--field-delay: 0.4s;">
-        <input type="text" id="onbName" class="onb-input" placeholder="e.g., Guest, Driver, Admin" autocomplete="off" maxlength="20" aria-label="Your Name">
-        <div class="onb-input-line" aria-hidden="true"></div>
-      </div>
-
-      <button id="onbNext1" class="onb-btn" disabled>
-        <span>continue</span><span class="btn-mark">›</span>
-      </button>
+    <div class="onb-eyebrow"><span class="num">01</span> / 02 &middot; <span class="lbl">the byline</span></div>
+    <h1 class="onb-headline">
+      <span class="hl-word w1"><span>Sign</span></span>
+      <span class="hl-word w2"><span>your</span></span>
+      <span class="hl-word w3 italic"><span>name</span></span><span class="hl-dot" aria-hidden="true"></span>
+    </h1>
+    <p class="onb-sub">Your name lives on the dashboard. Greeting, hero, footer. Quiet, never loud.</p>
+    <div class="onb-input-wrap">
+      <input id="onbName" class="onb-input" type="text" placeholder="first name" autocomplete="given-name" maxlength="24" />
     </div>
+    <button id="onbNext1" class="onb-btn" disabled>
+      <span>continue</span><span class="btn-mark">›</span>
+    </button>
+  </div>
 
   <!-- STEP 2: driver -->
   <div class="onb-stage hidden" id="onbStep2">
@@ -4053,15 +4052,10 @@ body.colo-open { overflow: hidden; }
 const API_URL = (function () {
   const m = document.querySelector('meta[name="pit-wall-api"]');
   if (m && m.content) return m.content;
-
   const host = location.hostname;
-
-  if (host === 'localhost' || host === '127.0.0.1') 
-  return 'http://localhost:3000/api/standings';
-
+  if (host === 'localhost' || host === '127.0.0.1') return 'http://127.0.0.1:8787/api/standings';
   return '/api/standings';
 })();
-
 const STORAGE_KEY = 'pit-wall:v1';
 const POLL_MS     = 10 * 60 * 1000;
 const COUNTRY_FALLBACK = '🏁';
@@ -4666,105 +4660,70 @@ function relTime(d) {
    ONBOARDING · cinematic
    ================================================================ */
 function showOnboarding(prefill) {
-  // Safe element selections using standard web selectors
-  const root = document.getElementById('onbRoot');
-  const step1 = document.getElementById('onbStep1');
-  const step2 = document.getElementById('onbStep2');
-  const next1 = document.getElementById('onbNext1');
-  const next2 = document.getElementById('onbNext2');
-  const back2 = document.getElementById('onbBack2');
-  const grid = document.getElementById('onbDrivers');
-  const callout = document.getElementById('onbCallout');
-  const calloutText = document.getElementById('onbCalloutText');
-  const nameInput = document.getElementById('onbName');
+  const root = $('onbRoot');
+  const step1 = $('onbStep1');
+  const step2 = $('onbStep2');
+  const nameInput = $('onbName');
+  const next1 = $('onbNext1');
+  const next2 = $('onbNext2');
+  const back2 = $('onbBack2');
+  const grid = $('onbDrivers');
+  const callout = $('onbCallout');
+  const calloutText = $('onbCalloutText');
 
-  // 1. Safety check: If core onboarding wrapper is missing, abort to prevent freezing
-  if (!root) {
-    console.warn("Onboarding root element (#onbRoot) not found.");
-    return;
-  }
-
-  // Reset core animation states cleanly
+  // Hard reset for replay of CSS animations.
   root.classList.remove('hidden', 'fading', 'flashing');
   root.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
+  // toggle display to retrigger animations on second open
   root.style.display = 'none';
   void root.offsetWidth;
   root.style.display = '';
 
-  // Handle stage visibility transitions safely
-  if (step1) {
-    step1.classList.remove('hidden', 'slide-out');
-    step1.classList.add('slide-in');
-  }
-  if (step2) {
-    step2.classList.add('hidden');
-    step2.classList.remove('slide-out', 'slide-in');
-  }
+  // Reset stages
+  step1.classList.remove('hidden', 'slide-out');
+  step1.classList.add('slide-in');
+  step2.classList.add('hidden');
+  step2.classList.remove('slide-out', 'slide-in');
 
-  // Load configuration attributes if visiting session again
   let chosenName = (prefill && prefill.name) || '';
   let chosenCode = (prefill && prefill.driverCode) || '';
 
-  // 2. Safe Input validation state tracking
-  if (nameInput && next1) {
-    nameInput.value = chosenName;
-    next1.disabled = !chosenName.trim();
+  nameInput.value = chosenName;
+  next1.disabled = !chosenName.trim();
+  setTimeout(() => nameInput.focus(), 800);
 
-    nameInput.oninput = () => {
-      chosenName = nameInput.value.trim();
-      next1.disabled = !chosenName;
-    };
+  nameInput.oninput = () => {
+    chosenName = nameInput.value.trim();
+    next1.disabled = !chosenName;
+  };
+  nameInput.onkeydown = (e) => { if (e.key === 'Enter' && !next1.disabled) next1.click(); };
 
-    setTimeout(() => nameInput.focus(), 600);
-  }
-
-  // 3. Safe Step 1 Navigation handler
-  if (next1) {
-    next1.onclick = () => {
-      if (!chosenName) return;
-      if (step1) {
-        step1.classList.remove('slide-in');
-        step1.classList.add('slide-out');
-      }
-      setTimeout(() => {
-        if (step1) {
-          step1.open = false;
-          step1.classList.add('hidden');
-        }
-        if (step2) {
-          step2.classList.remove('hidden');
-          step2.classList.add('slide-in');
-        }
-        paintDriverGrid();
-      }, 480);
-    };
-  }
-
-  // 4. Safe Step 2 Back navigation button handler
-  if (back2) {
-    back2.onclick = () => {
-      if (step2) {
-        step2.classList.remove('slide-in');
-        step2.classList.add('slide-out');
-      }
-      setTimeout(() => {
-        if (step2) step2.classList.add('hidden');
-        if (step1) {
-          step1.classList.remove('hidden', 'slide-out');
-          step1.classList.add('slide-in');
-        }
-        if (nameInput) setTimeout(() => nameInput.focus(), 400);
-      }, 380);
-    };
-  }
+  next1.onclick = () => {
+    step1.classList.remove('slide-in');
+    step1.classList.add('slide-out');
+    setTimeout(() => {
+      step1.classList.add('hidden');
+      step2.classList.remove('hidden');
+      step2.classList.add('slide-in');
+      paintDriverGrid();
+    }, 480);
+  };
+  back2.onclick = () => {
+    step2.classList.remove('slide-in');
+    step2.classList.add('slide-out');
+    setTimeout(() => {
+      step2.classList.add('hidden');
+      step1.classList.remove('hidden', 'slide-out');
+      step1.classList.add('slide-in');
+      nameInput.focus();
+    }, 380);
+  };
 
   function paintDriverGrid() {
-    if (!grid) return;
     const drivers = (window.__latestData && window.__latestData.drivers && window.__latestData.drivers.length)
       ? window.__latestData.drivers.map(d => [d.code, `${d.given_name} ${d.family_name}`, d.team_id, d.permanent_number])
       : DEFAULT_DRIVERS;
-      
     grid.innerHTML = drivers.map(([code, name, team, num], i) => `
       <button type="button" class="onb-drv${code === chosenCode ? ' selected' : ''}"
               data-code="${code}" data-team="${team}"
@@ -4784,84 +4743,41 @@ function showOnboarding(prefill) {
       });
       btn.addEventListener('mouseleave', () => {
         if (!chosenCode) {
-          if (calloutText) calloutText.textContent = 'scroll · tap a card to lock your colour';
-          if (callout) callout.classList.remove('show');
+          calloutText.textContent = 'scroll · tap a card to lock your colour';
+          callout.classList.remove('show');
         } else {
+          // restore selected callout
           const sel = grid.querySelector('.onb-drv.selected');
           if (sel) updateCallout(sel.getAttribute('data-team'), sel.querySelector('.drv-name').textContent);
         }
       });
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (ev) => {
         grid.querySelectorAll('.onb-drv.selected').forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-selected','false'); });
         btn.classList.add('selected');
         btn.setAttribute('aria-selected','true');
         chosenCode = btn.getAttribute('data-code');
         const team = btn.getAttribute('data-team');
-        if (next2) next2.disabled = false;
+        next2.disabled = false;
         updateCallout(team, btn.querySelector('.drv-name').textContent);
+        // briefly bounce the selected card
         btn.animate(
           [{ transform: 'translateY(-1px) scale(1)' }, { transform: 'translateY(-4px) scale(1.02)' }, { transform: 'translateY(-1px) scale(1)' }],
           { duration: 320, easing: 'cubic-bezier(.2,.9,.25,1)' }
         );
-        if (typeof spawnParticles === 'function') spawnParticles(btn, teamColor(team));
+        spawnParticles(btn, teamColor(team));
+        // briefly shift root --accent so callout colour previews the team
         document.documentElement.style.setProperty('--accent', rawTeamHex(team) || '#e10600');
       });
     });
 
-    if (next2) next2.disabled = !chosenCode;
+    next2.disabled = !chosenCode;
     if (chosenCode) {
       const sel = grid.querySelector('.onb-drv.selected');
       if (sel) updateCallout(sel.getAttribute('data-team'), sel.querySelector('.drv-name').textContent);
     } else {
-      if (calloutText) calloutText.textContent = 'scroll · tap a card to lock your colour';
+      calloutText.textContent = 'scroll · tap a card to lock your colour';
     }
   }
-
-  function updateCallout(teamId, driverName) {
-    if (!calloutText || !callout) return;
-    const note = TEAM_NOTE[teamId] || teamDisplayName(teamId, '');
-    calloutText.innerHTML = `<strong>${driverName.toUpperCase()}</strong> &middot; ${note}`;
-    callout.classList.add('show');
-  }
-
-  if (next2) {
-    next2.onclick = () => {
-      const cfg = { name: chosenName, driverCode: chosenCode, savedAt: new Date().toISOString() };
-      if (typeof saveConfig === 'function') saveConfig(cfg);
-      if (grid) {
-        const selBtn = grid.querySelector('.onb-drv.selected');
-        if (selBtn) {
-          const col = getComputedStyle(selBtn).getPropertyValue('--drv-color').trim() || '#e10600';
-          root.style.setProperty('--drv-color', col);
-          if (typeof spawnParticles === 'function') spawnParticles(next2, col, 36);
-        }
-      }
-      root.classList.add('flashing');
-      if (typeof closeOnboarding === 'function') {
-        setTimeout(() => closeOnboarding(cfg), 620);
-      }
-    };
-  }
-}
-  function updateCallout(teamId, driverName) {
-    const note = TEAM_NOTE[teamId] || teamDisplayName(teamId, '');
-    calloutText.innerHTML = `<strong>${driverName.toUpperCase()}</strong> &middot; ${note}`;
-    callout.classList.add('show');
-  }
-
-  next2.onclick = () => {
-    const cfg = { name: chosenName, driverCode: chosenCode, savedAt: new Date().toISOString() };
-    saveConfig(cfg);
-    const selBtn = grid.querySelector('.onb-drv.selected');
-    if (selBtn) {
-      const col = getComputedStyle(selBtn).getPropertyValue('--drv-color').trim() || '#e10600';
-      root.style.setProperty('--drv-color', col);
-      spawnParticles(next2, col, 36);
-    }
-    root.classList.add('flashing');
-    setTimeout(() => closeOnboarding(cfg), 620);
-  };
-}
 
   function updateCallout(teamId, driverName) {
     const note = TEAM_NOTE[teamId] || teamDisplayName(teamId, '');
@@ -4876,6 +4792,7 @@ function showOnboarding(prefill) {
     if (selBtn) {
       const col = getComputedStyle(selBtn).getPropertyValue('--drv-color').trim() || '#e10600';
       root.style.setProperty('--drv-color', col);
+      // bigger particle burst from the centre on confirm
       spawnParticles(next2, col, 36);
     }
     root.classList.add('flashing');
@@ -4953,41 +4870,12 @@ function closeOnboarding(cfg) {
    DATA FETCH + POLL
    ================================================================ */
 let pollTimer = null;
-
-  function startPolling() {
-    if (pollTimer) clearInterval(pollTimer);
-
-    const data = window.__latestData;
-
-    let interval = 60000;
-
-    if (data?.next_race?.status === "live") {
-      interval = 15000;
-    } else if (data?.next_race?.start_utc) {
-      const now = new Date();
-      const raceDate = new Date(data.next_race.start_utc);
-      const diffHours = (raceDate - now) / (1000 * 60 * 60);
-
-      if (diffHours < 72) {
-        interval = 60000;
-      } else {
-        interval = 10 * 60 * 1000;
-      }
-    }
-
-    pollTimer = setInterval(() => {
-      fetchAndRender(loadConfig());
-    }, interval);
-
-    console.log("Polling every", interval / 1000, "seconds");
-  }
 async function fetchAndRender(cfg) {
   try {
     const r = await fetch(API_URL, { headers: { 'accept': 'application/json' } });
     if (!r.ok) throw new Error('http ' + r.status);
     const data = await r.json();
     window.__latestData = data;
-    startPolling();
     renderAll(data, cfg);
     paintLiveIndicator(data, false);
   } catch (e) {
@@ -5821,6 +5709,7 @@ function applyConfig(cfg) {
   $('onbEdit').addEventListener('click', () => showOnboarding(loadConfig()));
 
   fetchAndRender(cfg);
+  pollTimer = setInterval(() => fetchAndRender(loadConfig()), POLL_MS);
 
   // refresh "X min ago" every 20 s
   setInterval(() => {
@@ -5828,25 +5717,24 @@ function applyConfig(cfg) {
     if (data && data._fetched_at_utc) paintLiveIndicator(data, false);
   }, 20 * 1000);
 
-// First-time onboarding trigger check
-  if (!cfg || !cfg.name || !cfg.driverCode) {
-    setTimeout(() => showOnboarding(cfg), 250);
+  // First-time onboarding
+  if (!cfg || !cfg.name) {
+    setTimeout(() => showOnboarding(null), 250);
   } else {
-    // returning visitor → skip intro, instantly clear splash on fresh data
+    // returning visitor → no onboarding, splash falls off on first data
     setTimeout(() => hideSplash(), 1800);
   }
 
-  // startLivePoll();
-  // fetchAndRender();
-  // setupPWA();
-  // setupTipChip();
-  // setupThanksPopup();
-  // renderChangelog();
+  // PWA, tip chip, thanks popup, changelog, live session poll
+  setupPWA();
+  setupTipChip();
+  setupThanksPopup();
+  renderChangelog();
+  startLivePoll();
 
   // safety: if fetch never returns, kill splash after 4 s
   setTimeout(() => hideSplash(), 4000);
 })();
 </script>
-<script src="script.js"></script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ffb48ca2e9e5014',t:'MTc3OTQ0NzI4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
