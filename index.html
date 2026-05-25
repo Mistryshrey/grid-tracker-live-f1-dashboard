@@ -3456,16 +3456,22 @@ body.colo-open { overflow: hidden; }
 
   <!-- STEP 1: name -->
   <div class="onb-stage" id="onbStep1">
-    <div class="onb-eyebrow"><span class="num">01</span> / 02 &middot; <span class="lbl">welcome</span></div>
-    <h1 class="onb-headline">
-      <span class="hl-word w1"><span>Welcome,</span></span>
-      <span class="hl-word w2 italic"><span>Shreeyy🥰</span></span><span class="hl-dot" aria-hidden="true"></span>
-    </h1>
-    <p class="onb-sub">Your personalized pit wall is primed and ready. Let's lock in your favorite driver profile next.</p>
-    <button id="onbNext1" class="onb-btn">
-      <span>get started</span><span class="btn-mark">›</span>
-    </button>
-  </div>
+      <div class="onb-eyebrow"><span class="num">01</span> / 02 &middot; <span class="lbl">identity</span></div>
+      <h1 class="onb-headline">
+        <span class="hl-word w1"><span>Enter your</span></span>
+        <span class="hl-word w2 italic"><span>name</span></span><span class="hl-dot" aria-hidden="true"></span>
+      </h1>
+      <p class="onb-sub">Drop your name or paddock handle below to customize your personalized live pit wall dashboard telemetry.</p>
+      
+      <div class="onb-field" style="--field-delay: 0.4s;">
+        <input type="text" id="onbName" class="onb-input" placeholder="e.g., Guest, Driver, Admin" autocomplete="off" maxlength="20" aria-label="Your Name">
+        <div class="onb-input-line" aria-hidden="true"></div>
+      </div>
+
+      <button id="onbNext1" class="onb-btn" disabled>
+        <span>continue</span><span class="btn-mark">›</span>
+      </button>
+    </div>
 
   <!-- STEP 2: driver -->
   <div class="onb-stage hidden" id="onbStep2">
@@ -4669,6 +4675,7 @@ function showOnboarding(prefill) {
   const grid = $('onbDrivers');
   const callout = $('onbCallout');
   const calloutText = $('onbCalloutText');
+  const nameInput = $('onbName'); // Captures the input element
 
   // Hard reset for replay of CSS animations.
   root.classList.remove('hidden', 'fading', 'flashing');
@@ -4684,17 +4691,30 @@ function showOnboarding(prefill) {
   step2.classList.add('hidden');
   step2.classList.remove('slide-out', 'slide-in');
 
-  // Pre-load your friend's profile identity automatically
-  let chosenName = "Princcyy🥰";
+  // Load existing profile attributes if visiting again
+  let chosenName = (prefill && prefill.name) || '';
   let chosenCode = (prefill && prefill.driverCode) || '';
 
-  // Ensure the welcome button is active immediately
-  if (next1) next1.disabled = false;
+  // Input validation state management
+  if (nameInput) {
+    nameInput.value = chosenName;
+    next1.disabled = !chosenName.trim();
+
+    nameInput.oninput = () => {
+      chosenName = nameInput.value.trim();
+      next1.disabled = !chosenName;
+    };
+
+    // Auto-focus input text cursor when the screen slides open
+    setTimeout(() => nameInput.focus(), 600);
+  }
 
   next1.onclick = () => {
+    if (!chosenName) return;
     step1.classList.remove('slide-in');
     step1.classList.add('slide-out');
     setTimeout(() => {
+      step1.open = false;
       step1.classList.add('hidden');
       step2.classList.remove('hidden');
       step2.classList.add('slide-in');
@@ -4709,6 +4729,7 @@ function showOnboarding(prefill) {
       step2.classList.add('hidden');
       step1.classList.remove('hidden', 'slide-out');
       step1.classList.add('slide-in');
+      if (nameInput) setTimeout(() => nameInput.focus(), 400);
     }, 380);
   };
 
@@ -4742,7 +4763,7 @@ function showOnboarding(prefill) {
           if (sel) updateCallout(sel.getAttribute('data-team'), sel.querySelector('.drv-name').textContent);
         }
       });
-      btn.addEventListener('click', (ev) => {
+      btn.addEventListener('click', () => {
         grid.querySelectorAll('.onb-drv.selected').forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-selected','false'); });
         btn.classList.add('selected');
         btn.setAttribute('aria-selected','true');
@@ -4767,6 +4788,26 @@ function showOnboarding(prefill) {
       calloutText.textContent = 'scroll · tap a card to lock your colour';
     }
   }
+
+  function updateCallout(teamId, driverName) {
+    const note = TEAM_NOTE[teamId] || teamDisplayName(teamId, '');
+    calloutText.innerHTML = `<strong>${driverName.toUpperCase()}</strong> &middot; ${note}`;
+    callout.classList.add('show');
+  }
+
+  next2.onclick = () => {
+    const cfg = { name: chosenName, driverCode: chosenCode, savedAt: new Date().toISOString() };
+    saveConfig(cfg);
+    const selBtn = grid.querySelector('.onb-drv.selected');
+    if (selBtn) {
+      const col = getComputedStyle(selBtn).getPropertyValue('--drv-color').trim() || '#e10600';
+      root.style.setProperty('--drv-color', col);
+      spawnParticles(next2, col, 36);
+    }
+    root.classList.add('flashing');
+    setTimeout(() => closeOnboarding(cfg), 620);
+  };
+}
 
   function updateCallout(teamId, driverName) {
     const note = TEAM_NOTE[teamId] || teamDisplayName(teamId, '');
