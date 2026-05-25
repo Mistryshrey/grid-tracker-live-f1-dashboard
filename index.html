@@ -4666,18 +4666,25 @@ function relTime(d) {
    ONBOARDING · cinematic
    ================================================================ */
 function showOnboarding(prefill) {
-  const root = $('onbRoot');
-  const step1 = $('onbStep1');
-  const step2 = $('onbStep2');
-  const next1 = $('onbNext1');
-  const next2 = $('onbNext2');
-  const back2 = $('onbBack2');
-  const grid = $('onbDrivers');
-  const callout = $('onbCallout');
-  const calloutText = $('onbCalloutText');
-  const nameInput = $('onbName'); // Captures the input element
+  // Safe element selections using standard web selectors
+  const root = document.getElementById('onbRoot');
+  const step1 = document.getElementById('onbStep1');
+  const step2 = document.getElementById('onbStep2');
+  const next1 = document.getElementById('onbNext1');
+  const next2 = document.getElementById('onbNext2');
+  const back2 = document.getElementById('onbBack2');
+  const grid = document.getElementById('onbDrivers');
+  const callout = document.getElementById('onbCallout');
+  const calloutText = document.getElementById('onbCalloutText');
+  const nameInput = document.getElementById('onbName');
 
-  // Hard reset for replay of CSS animations.
+  // 1. Safety check: If core onboarding wrapper is missing, abort to prevent freezing
+  if (!root) {
+    console.warn("Onboarding root element (#onbRoot) not found.");
+    return;
+  }
+
+  // Reset core animation states cleanly
   root.classList.remove('hidden', 'fading', 'flashing');
   root.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
@@ -4685,18 +4692,22 @@ function showOnboarding(prefill) {
   void root.offsetWidth;
   root.style.display = '';
 
-  // Reset stages
-  step1.classList.remove('hidden', 'slide-out');
-  step1.classList.add('slide-in');
-  step2.classList.add('hidden');
-  step2.classList.remove('slide-out', 'slide-in');
+  // Handle stage visibility transitions safely
+  if (step1) {
+    step1.classList.remove('hidden', 'slide-out');
+    step1.classList.add('slide-in');
+  }
+  if (step2) {
+    step2.classList.add('hidden');
+    step2.classList.remove('slide-out', 'slide-in');
+  }
 
-  // Load existing profile attributes if visiting again
+  // Load configuration attributes if visiting session again
   let chosenName = (prefill && prefill.name) || '';
   let chosenCode = (prefill && prefill.driverCode) || '';
 
-  // Input validation state management
-  if (nameInput) {
+  // 2. Safe Input validation state tracking
+  if (nameInput && next1) {
     nameInput.value = chosenName;
     next1.disabled = !chosenName.trim();
 
@@ -4705,38 +4716,55 @@ function showOnboarding(prefill) {
       next1.disabled = !chosenName;
     };
 
-    // Auto-focus input text cursor when the screen slides open
     setTimeout(() => nameInput.focus(), 600);
   }
 
-  next1.onclick = () => {
-    if (!chosenName) return;
-    step1.classList.remove('slide-in');
-    step1.classList.add('slide-out');
-    setTimeout(() => {
-      step1.open = false;
-      step1.classList.add('hidden');
-      step2.classList.remove('hidden');
-      step2.classList.add('slide-in');
-      paintDriverGrid();
-    }, 480);
-  };
+  // 3. Safe Step 1 Navigation handler
+  if (next1) {
+    next1.onclick = () => {
+      if (!chosenName) return;
+      if (step1) {
+        step1.classList.remove('slide-in');
+        step1.classList.add('slide-out');
+      }
+      setTimeout(() => {
+        if (step1) {
+          step1.open = false;
+          step1.classList.add('hidden');
+        }
+        if (step2) {
+          step2.classList.remove('hidden');
+          step2.classList.add('slide-in');
+        }
+        paintDriverGrid();
+      }, 480);
+    };
+  }
 
-  back2.onclick = () => {
-    step2.classList.remove('slide-in');
-    step2.classList.add('slide-out');
-    setTimeout(() => {
-      step2.classList.add('hidden');
-      step1.classList.remove('hidden', 'slide-out');
-      step1.classList.add('slide-in');
-      if (nameInput) setTimeout(() => nameInput.focus(), 400);
-    }, 380);
-  };
+  // 4. Safe Step 2 Back navigation button handler
+  if (back2) {
+    back2.onclick = () => {
+      if (step2) {
+        step2.classList.remove('slide-in');
+        step2.classList.add('slide-out');
+      }
+      setTimeout(() => {
+        if (step2) step2.classList.add('hidden');
+        if (step1) {
+          step1.classList.remove('hidden', 'slide-out');
+          step1.classList.add('slide-in');
+        }
+        if (nameInput) setTimeout(() => nameInput.focus(), 400);
+      }, 380);
+    };
+  }
 
   function paintDriverGrid() {
+    if (!grid) return;
     const drivers = (window.__latestData && window.__latestData.drivers && window.__latestData.drivers.length)
       ? window.__latestData.drivers.map(d => [d.code, `${d.given_name} ${d.family_name}`, d.team_id, d.permanent_number])
       : DEFAULT_DRIVERS;
+      
     grid.innerHTML = drivers.map(([code, name, team, num], i) => `
       <button type="button" class="onb-drv${code === chosenCode ? ' selected' : ''}"
               data-code="${code}" data-team="${team}"
@@ -4756,8 +4784,8 @@ function showOnboarding(prefill) {
       });
       btn.addEventListener('mouseleave', () => {
         if (!chosenCode) {
-          calloutText.textContent = 'scroll · tap a card to lock your colour';
-          callout.classList.remove('show');
+          if (calloutText) calloutText.textContent = 'scroll · tap a card to lock your colour';
+          if (callout) callout.classList.remove('show');
         } else {
           const sel = grid.querySelector('.onb-drv.selected');
           if (sel) updateCallout(sel.getAttribute('data-team'), sel.querySelector('.drv-name').textContent);
@@ -4769,26 +4797,52 @@ function showOnboarding(prefill) {
         btn.setAttribute('aria-selected','true');
         chosenCode = btn.getAttribute('data-code');
         const team = btn.getAttribute('data-team');
-        next2.disabled = false;
+        if (next2) next2.disabled = false;
         updateCallout(team, btn.querySelector('.drv-name').textContent);
         btn.animate(
           [{ transform: 'translateY(-1px) scale(1)' }, { transform: 'translateY(-4px) scale(1.02)' }, { transform: 'translateY(-1px) scale(1)' }],
           { duration: 320, easing: 'cubic-bezier(.2,.9,.25,1)' }
         );
-        spawnParticles(btn, teamColor(team));
+        if (typeof spawnParticles === 'function') spawnParticles(btn, teamColor(team));
         document.documentElement.style.setProperty('--accent', rawTeamHex(team) || '#e10600');
       });
     });
 
-    next2.disabled = !chosenCode;
+    if (next2) next2.disabled = !chosenCode;
     if (chosenCode) {
       const sel = grid.querySelector('.onb-drv.selected');
       if (sel) updateCallout(sel.getAttribute('data-team'), sel.querySelector('.drv-name').textContent);
     } else {
-      calloutText.textContent = 'scroll · tap a card to lock your colour';
+      if (calloutText) calloutText.textContent = 'scroll · tap a card to lock your colour';
     }
   }
 
+  function updateCallout(teamId, driverName) {
+    if (!calloutText || !callout) return;
+    const note = TEAM_NOTE[teamId] || teamDisplayName(teamId, '');
+    calloutText.innerHTML = `<strong>${driverName.toUpperCase()}</strong> &middot; ${note}`;
+    callout.classList.add('show');
+  }
+
+  if (next2) {
+    next2.onclick = () => {
+      const cfg = { name: chosenName, driverCode: chosenCode, savedAt: new Date().toISOString() };
+      if (typeof saveConfig === 'function') saveConfig(cfg);
+      if (grid) {
+        const selBtn = grid.querySelector('.onb-drv.selected');
+        if (selBtn) {
+          const col = getComputedStyle(selBtn).getPropertyValue('--drv-color').trim() || '#e10600';
+          root.style.setProperty('--drv-color', col);
+          if (typeof spawnParticles === 'function') spawnParticles(next2, col, 36);
+        }
+      }
+      root.classList.add('flashing');
+      if (typeof closeOnboarding === 'function') {
+        setTimeout(() => closeOnboarding(cfg), 620);
+      }
+    };
+  }
+}
   function updateCallout(teamId, driverName) {
     const note = TEAM_NOTE[teamId] || teamDisplayName(teamId, '');
     calloutText.innerHTML = `<strong>${driverName.toUpperCase()}</strong> &middot; ${note}`;
