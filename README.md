@@ -1,6 +1,6 @@
 # 🏁 The Pit Wall · Live F1 2026 Dashboard
 
-A premium, full-stack, auto-updating Formula 1 dashboard built with a cinematic magazine-style editorial layout. This project features a tailored onboarding experience designed specifically for **Princcyy🥰**, which transitions seamlessly into a live data hub tracking the entire 2026 F1 season.
+A premium, full-stack, auto-updating Formula 1 dashboard built with a cinematic magazine-style editorial layout. This project features a tailored onboarding experience designed specifically for **Shrey🥰**, which transitions seamlessly into a live data hub tracking the entire 2026 F1 season.
 
 The project has been optimized for serverless architecture and is fully deployed on **Vercel**.
 
